@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Product } from './interfaces/product.interface';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class ProductsService {
@@ -21,7 +21,7 @@ export class ProductsService {
   }
 
   create(dto: CreateProductDto): Product {
-    const id = uuidv4();
+    const id = randomUUID();
     const now = new Date();
     const product: Product = { id, ...dto, createdAt: now, updatedAt: now };
     this.products.set(id, product);
