@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { NotFoundException } from '@nestjs/common';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -12,6 +13,10 @@ describe('ProductsService', () => {
     }).compile();
 
     service = module.get<ProductsService>(ProductsService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should create a new product', () => {
@@ -74,6 +79,90 @@ describe('ProductsService', () => {
 
   it('should throw NotFoundException when id does not exist', () => {
     expect(() => service.findById('invalid-id')).toThrow(
+      new NotFoundException('Product with id invalid-id not found'),
+    );
+  });
+
+  it('should update the product when id exists', () => {
+    const createDto: CreateProductDto = {
+      name: 'Coffee',
+      description: 'Dark Roast',
+      price: 9.99,
+      stock: 100,
+      category: 'Beverages',
+    };
+    const product = service.create(createDto);
+    const updateDto: UpdateProductDto = {
+      price: 12.99,
+    };
+    const updatedProduct = service.update(product.id, updateDto);
+    expect(service.findById(product.id)).toEqual(updatedProduct);
+    expect(updatedProduct).toMatchObject({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: 12.99,
+      stock: product.stock,
+      category: product.category,
+    });
+    expect(updatedProduct.updatedAt.getTime()).toBeGreaterThanOrEqual(
+      product.createdAt.getTime(),
+    );
+    expect(updatedProduct.createdAt).toEqual(product.createdAt);
+  });
+
+  it('should update the product and check updatedAt using fake timers', () => {
+    const T0 = new Date('2026-01-01T00:00:00Z');
+    const T1 = new Date('2026-01-02T00:00:00Z');
+    jest.useFakeTimers().setSystemTime(T0);
+    const createDto: CreateProductDto = {
+      name: 'Milk',
+      description: 'Fresh and Creamy',
+      price: 6.99,
+      stock: 80,
+      category: 'Beverages',
+    };
+    const product = service.create(createDto);
+    jest.setSystemTime(T1);
+    const updateDto: UpdateProductDto = {
+      price: 8.99,
+    };
+    const updatedProduct = service.update(product.id, updateDto);
+    expect(updatedProduct.createdAt).toEqual(T0);
+    expect(updatedProduct.updatedAt).toEqual(T1);
+    expect(updatedProduct).toMatchObject({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: 8.99,
+      stock: product.stock,
+      category: product.category,
+    });
+  });
+
+  it('should throw NotFoundException when updating an unknown id', () => {
+    expect(() => service.update('invalid-id', { price: 10.99 })).toThrow(
+      new NotFoundException('Product with id invalid-id not found'),
+    );
+  });
+
+  it('should delete the product when id exists', () => {
+    const dto: CreateProductDto = {
+      name: 'Coffee',
+      description: 'Dark Roast',
+      price: 9.99,
+      stock: 100,
+      category: 'Beverages',
+    };
+    const product = service.create(dto);
+    service.remove(product.id);
+    expect(() => service.findById(product.id)).toThrow(
+      new NotFoundException(`Product with id ${product.id} not found`),
+    );
+  });
+
+  it('should throw NotFoundException when trying to delete a non-existent product', () => {
+    expect(() => service.remove('invalid-id')).toThrow(
       new NotFoundException('Product with id invalid-id not found'),
     );
   });
