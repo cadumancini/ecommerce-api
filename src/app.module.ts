@@ -22,6 +22,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         entities: [],
         synchronize: true,
         logging: true,
+        autoLoadEntities: true,
       }),
     }),
     ProductsModule,
